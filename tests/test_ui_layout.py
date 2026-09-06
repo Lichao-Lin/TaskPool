@@ -18,6 +18,7 @@ class LayoutTests(unittest.TestCase):
                 left, right = forms.winfo_children()
                 self.assertAlmostEqual(left.winfo_width(), right.winfo_width(), delta=12)
                 self.assertGreater(dashboard.winfo_height(), 250)
+                self.assertGreater(app.task_panel.winfo_width(), app.reward_panel.winfo_width() * 1.8)
             finally:
                 app.destroy()
 

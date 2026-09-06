@@ -17,9 +17,9 @@ from tkinter import colorchooser, filedialog, messagebox, ttk
 APP_NAME = "TaskPool"
 APP_VERSION = "1.0.0"
 DEFAULT_ACCENT = "#7CFFB2"
-BG = "#0B0F14"
-PANEL = "#111821"
-PANEL_2 = "#17212B"
+BG = "#000000"
+PANEL = "#0B1016"
+PANEL_2 = "#121A23"
 TEXT = "#E6EDF3"
 MUTED = "#8B9AAA"
 DANGER = "#FF6B81"
@@ -339,12 +339,23 @@ class TaskPoolApp(tk.Tk):
         self.stats_label.pack(side="left", padx=22)
         ttk.Label(stat, text="积分余额", style="Muted.TLabel").pack(side="right")
 
-        tabs = ttk.Notebook(parent)
-        tabs.pack(fill="both", expand=True)
-        task_tab = ttk.Frame(tabs, style="Panel.TFrame", padding=10)
-        reward_tab = ttk.Frame(tabs, style="Panel.TFrame", padding=10)
-        tabs.add(task_tab, text="  当前任务  ")
-        tabs.add(reward_tab, text="  奖励池  ")
+        workspace = ttk.Frame(parent)
+        workspace.pack(fill="both", expand=True)
+        workspace.columnconfigure(0, weight=1, uniform="workspace")
+        workspace.columnconfigure(1, weight=2, uniform="workspace")
+        workspace.rowconfigure(0, weight=1)
+
+        reward_tab = ttk.Frame(workspace, style="Panel.TFrame", padding=12)
+        task_tab = ttk.Frame(workspace, style="Panel.TFrame", padding=12)
+        reward_tab.grid(row=0, column=0, sticky="nsew", padx=(0, 7))
+        task_tab.grid(row=0, column=1, sticky="nsew", padx=(7, 0))
+        self.reward_panel = reward_tab
+        self.task_panel = task_tab
+
+        ttk.Label(reward_tab, text="★ REWARD POOL / 奖池", style="Panel.TLabel",
+                  font=("Consolas", 11, "bold")).pack(anchor="w", pady=(0, 9))
+        ttk.Label(task_tab, text="> ACTIVE TASKS / 当前任务", style="Panel.TLabel",
+                  font=("Consolas", 11, "bold")).pack(anchor="w", pady=(0, 9))
 
         task_cols = ("content", "output", "deadline", "points", "status")
         self.task_tree = ttk.Treeview(task_tab, columns=task_cols, show="headings", selectmode="browse")
@@ -360,11 +371,11 @@ class TaskPoolApp(tk.Tk):
         ttk.Label(bar, text="双击任务也可完成", style="Muted.TLabel").pack(side="right")
         self.task_tree.bind("<Double-1>", lambda _: self.complete_selected())
 
-        reward_cols = ("name", "description", "cost", "state")
+        reward_cols = ("name", "cost", "state")
         self.reward_tree = ttk.Treeview(reward_tab, columns=reward_cols, show="headings", selectmode="browse")
-        for col, title, width in zip(reward_cols, ("奖励", "说明", "所需积分", "可兑换"), (190, 250, 90, 80)):
+        for col, title, width in zip(reward_cols, ("奖励", "积分", "状态"), (150, 60, 70)):
             self.reward_tree.heading(col, text=title)
-            self.reward_tree.column(col, width=width, minwidth=60, anchor="center" if col in ("cost", "state") else "w")
+            self.reward_tree.column(col, width=width, minwidth=50, anchor="center" if col in ("cost", "state") else "w")
         self.reward_tree.pack(fill="both", expand=True)
         bar2 = ttk.Frame(reward_tab, style="Panel.TFrame")
         bar2.pack(fill="x", pady=(10, 0))
@@ -479,7 +490,7 @@ class TaskPoolApp(tk.Tk):
         for reward in self.db.list_rewards():
             state = "READY" if balance >= reward["cost"] else f"差 {reward['cost'] - balance}"
             self.reward_tree.insert("", "end", iid=str(reward["id"]),
-                                    values=(reward["name"], reward["description"], reward["cost"], state))
+                                    values=(reward["name"], reward["cost"], state))
         total, done, spent = self.db.stats()
         self.balance_label.configure(text=f"{balance} PTS")
         self.stats_label.configure(text=f"任务 {done}/{total} 达成   ·   已兑换 {spent} 分")
@@ -487,8 +498,11 @@ class TaskPoolApp(tk.Tk):
     def choose_color(self):
         chosen = colorchooser.askcolor(color=self.accent, title="选择强调色", parent=self)[1]
         if chosen:
-            self.db.set_setting("accent", chosen.upper())
-            messagebox.showinfo("主题色已保存", "重启程序后会完整应用新主题色。", parent=self)
+            self.accent = chosen.upper()
+            self.db.set_setting("accent", self.accent)
+            self._build_style()
+            self.toast.configure(bg=self.accent)
+            self.show_toast("主题色已立即应用")
 
     def choose_data_path(self):
         current = self.db.path.parent.resolve()
