@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+*.db
+build/
+dist/
+*.spec
+.venv/
+release-package/
