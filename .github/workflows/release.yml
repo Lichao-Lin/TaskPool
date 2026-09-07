@@ -1,13 +1,10 @@
 name: Build Windows Release
-
 on:
   push:
     tags:
-      - "v*"
-
+      - 'v*'
 permissions:
   contents: write
-
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -15,18 +12,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - name: Run tests
-        run: python -m unittest discover -s tests -v
-      - name: Install packager
-        run: python -m pip install -r requirements-build.txt
-      - name: Build executable
-        run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name TaskPool app.py
-      - name: Create archive
+          python-version: '3.12'
+      - name: Build and test installer
         shell: pwsh
-        run: Compress-Archive -LiteralPath dist/TaskPool.exe, README.md, LICENSE -DestinationPath TaskPool-windows-x64.zip
+        run: ./build.ps1
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: TaskPool-windows-x64.zip
+          files: dist/TaskPool-Setup-*-windows-x64.exe
+          fail_on_unmatched_files: true
           generate_release_notes: true
