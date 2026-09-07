@@ -13,11 +13,11 @@ from tkinter import ttk
 
 
 APP_NAME = "TaskPool"
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.0.1"
 DEFAULT_ACCENT = "#50E3FF"
 BG = "#000000"
-PANEL = "#0B1016"
-PANEL_2 = "#121A23"
+PANEL = "#040608"
+PANEL_2 = "#080C10"
 TEXT = "#E6EDF3"
 MUTED = "#8B9AAA"
 DANGER = "#FF6B81"
@@ -348,8 +348,9 @@ class TaskPoolApp(tk.Tk):
         s.map('Accent.TButton', background=[('active', '#ACF1FF')], foreground=[('active', '#001018')])
         s.configure('TRadiobutton', background=PANEL, foreground=self.text, padding=4)
         s.configure('Treeview', background=PANEL, fieldbackground=PANEL, foreground=self.text,
-                    rowheight=42, borderwidth=0, font=('Microsoft YaHei UI', 10))
-        s.configure('Treeview.Heading', background=PANEL_2, foreground=self.accent, padding=6)
+                    bordercolor='#15313D', lightcolor='#15313D', darkcolor='#15313D', rowheight=42, borderwidth=0, font=('Microsoft YaHei UI', 10))
+        s.configure('Treeview.Heading', background=PANEL_2, foreground=self.accent, padding=6, bordercolor='#15313D', lightcolor='#15313D', darkcolor='#15313D')
+        s.configure('Vertical.TScrollbar', background='#10202A', troughcolor=PANEL, bordercolor=PANEL, lightcolor=PANEL, darkcolor=PANEL, arrowcolor=MUTED)
         s.map('Treeview', background=[('selected', '#153847')])
 
     def panel(self, parent, title, subtitle):
@@ -366,10 +367,12 @@ class TaskPoolApp(tk.Tk):
                   font=('Consolas', 24, 'bold')).pack(side='left')
         ttk.Label(self.header, text='PERSONAL OPERATING SYSTEM  /  本地控制台', foreground=MUTED,
                   font=('Consolas', 10)).pack(side='left', padx=20)
-        ttk.Button(self.header, text='界面与存储设置', command=self.toggle_settings).pack(side='right')
+        self.settings_button = ttk.Button(self.header, text='界面与存储设置', command=self.toggle_settings)
+        self.settings_button.pack(side='right')
         self.settings_panel = ttk.Frame(self, padding=12, style='Panel.TFrame')
         self._build_settings()
         body = ttk.Frame(self, padding=6)
+        self.body = body
         body.pack(fill='both', expand=True, padx=16, pady=8)
         body.rowconfigure(1, weight=1)
         body.columnconfigure(0, weight=1)
@@ -453,27 +456,28 @@ class TaskPoolApp(tk.Tk):
         c.delete('all')
         w, h = max(c.winfo_width(), 260), max(c.winfo_height(), 220)
         cx, cy = w / 2, h / 2
-        rx = ry = min(w, h) * .255
+        rx = ry = min(w, h) * .165
         for scale, color in ((1.15, '#173C48'), (1, self.accent), (.84, '#245B6A'), (.58, '#142F3B')):
             c.create_oval(cx-rx*scale, cy-ry*scale, cx+rx*scale, cy+ry*scale, outline=color, width=1)
+        c.create_arc(cx-rx*1.05, cy-ry*1.05, cx+rx*1.05, cy+ry*1.05, start=getattr(self, 'scan_angle', 0), extent=46, style='arc', outline='#2595AD', width=2, tags='scan')
         for angle in range(0, 360, 10):
             a = math.radians(angle)
             c.create_line(cx+rx*1.19*math.cos(a), cy+ry*1.19*math.sin(a), cx+rx*1.23*math.cos(a), cy+ry*1.23*math.sin(a), fill='#285565')
         c.create_line(cx-25, cy, cx+25, cy, fill='#245B6A')
         c.create_text(cx, cy-12, text=str(self.db.balance()), fill=self.accent, font=('Consolas', 22, 'bold'))
-        c.create_text(cx, cy+17, text='PTS / AVAILABLE', fill=MUTED, font=('Consolas', 8))
+        c.create_text(cx, cy+17, text='PTS', fill=MUTED, font=('Consolas', 8))
         rewards = self.db.list_rewards()
         pages = max(1, math.ceil(len(rewards)/12))
         self.reward_page = min(self.reward_page, pages-1)
         self.page_label.configure(text=f'{self.reward_page+1} / {pages}  ·  {len(rewards)} 份奖励')
         for i, reward in enumerate(rewards[self.reward_page*12:self.reward_page*12+12]):
             # Consecutive slots deliberately leave the unused arc empty.
-            degrees = -112+i*22
+            degrees = -112+i*24
             angle = math.radians(degrees)
             ux, uy = math.cos(angle), math.sin(angle)
             vx, vy = -uy, ux
-            inner = min(w, h)*.31
-            radial_width = min(w, h)*.18
+            inner = min(w, h)*.205
+            radial_width = min(w, h)*.28
             x, y = cx+inner*ux, cy+inner*uy
             tag = f'reward{reward["id"]}'
             selected = reward['id'] == self.selected_reward
@@ -827,6 +831,8 @@ class TaskPoolApp(tk.Tk):
         for r in self.db.list_tasks():
             if self.task_tree.exists(str(r['id'])):
                 self.task_tree.item(str(r['id']), tags=('done',) if r['status']=='done' else ('urgent',) if deadline_urgent(r['deadline'], now) else ())
+        self.scan_angle = (getattr(self, 'scan_angle', 0)+9) % 360
+        self.orbit.itemconfigure('scan', start=self.scan_angle)
         self._tick_job = self.after(1000, self.tick)
 
     def _build_settings(self):
@@ -842,6 +848,22 @@ class TaskPoolApp(tk.Tk):
         ttk.Button(row, text='应用颜色', command=self.apply_colors).pack(side='left', padx=8)
         for title, bg, fg, accent in [('冰蓝', '#000000', '#E6EDF3', '#50E3FF'), ('琥珀', '#080503', '#FFF2D6', '#FFBE55'), ('紫光', '#080510', '#EEE7FF', '#B398FF')]:
             ttk.Button(row, text=title, command=lambda b=bg, f=fg, a=accent: self.preset(b, f, a)).pack(side='left', padx=3)
+        choices = [
+            ('background', '背景', [('纯黑','#000000'),('深空','#020508'),('墨蓝','#030911'),('暗紫','#080410'),('炭灰','#101010')]),
+            ('text', '文字', [('霜白','#E6EDF3'),('银灰','#B5C4CF'),('冰蓝','#9CEAFF'),('青绿','#91F7D0'),('琥珀','#FFD08A'),('淡紫','#CDBAFF'),('玫红','#FFB1CE')]),
+            ('accent', '光效', [('冰蓝','#50E3FF'),('青绿','#52FFC2'),('琥珀','#FFBE55'),('紫光','#B398FF'),('玫红','#FF77BB'),('纯白','#FFFFFF')]),
+        ]
+        for key, label, colors in choices:
+            palette = ttk.Frame(self.settings_panel, style='Panel.TFrame')
+            palette.pack(fill='x', pady=(5, 0))
+            ttk.Label(palette, text=label+'颜色', style='Muted.TLabel', width=9).pack(side='left')
+            for name, color in colors:
+                button = tk.Button(palette, text='● '+name, bg=color if key=='background' else PANEL_2,
+                    fg='#E6EDF3' if key=='background' else color, activebackground='#15313D',
+                    activeforeground='#FFFFFF', relief='flat', bd=0, padx=10, pady=2,
+                    highlightthickness=1, highlightbackground='#1D3340', cursor='hand2',
+                    font=('Microsoft YaHei UI', 9), command=lambda k=key, c=color: self.select_color(k,c))
+                button.pack(side='left', padx=(0, 5))
         line = ttk.Frame(self.settings_panel, style='Panel.TFrame')
         line.pack(fill='x', pady=(8, 0))
         ttk.Label(line, text='背景图片路径', style='Muted.TLabel').pack(side='left')
@@ -862,8 +884,16 @@ class TaskPoolApp(tk.Tk):
     def toggle_settings(self):
         if self.settings_panel.winfo_manager():
             self.settings_panel.pack_forget()
+            self.body.pack(after=self.header, fill='both', expand=True, padx=16, pady=8)
+            self.settings_button.configure(text='界面与存储设置')
         else:
-            self.settings_panel.pack(after=self.header, fill='x', padx=22, pady=6)
+            self.body.pack_forget()
+            self.settings_panel.pack(after=self.header, fill='both', expand=True, padx=22, pady=10)
+            self.settings_button.configure(text='返回任务控制台')
+
+    def select_color(self, key, color):
+        self.put(self.setting_entries[key], color)
+        self.apply_colors()
 
     def preset(self, bg, text, accent):
         for key, value in [('background', bg), ('text', text), ('accent', accent)]:

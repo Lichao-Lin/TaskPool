@@ -9,4 +9,4 @@ if ($LASTEXITCODE) { throw 'Tests failed' }
 if ($LASTEXITCODE) { throw 'Executable build failed' }
 & $ISCC installer.iss
 if ($LASTEXITCODE) { throw 'Installer build failed' }
-Write-Host 'Ready: dist/TaskPool-Setup-2.0.0-windows-x64.exe'
+Write-Host 'Ready: dist/TaskPool-Setup-2.0.1-windows-x64.exe'

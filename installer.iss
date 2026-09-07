@@ -1,4 +1,4 @@
-#define MyAppVersion "2.0.0"
+#define MyAppVersion "2.0.1"
 [Setup]
 AppId={{A03DF892-5585-40C9-B80C-40D4A2B96352}
 AppName=TaskPool
