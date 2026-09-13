@@ -19,6 +19,6 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/TaskPool-Setup-*-windows-x64.exe
+          files: dist/Termxk-Setup-*-windows-x64.exe
           fail_on_unmatched_files: true
           generate_release_notes: true

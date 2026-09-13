@@ -9,3 +9,5 @@ release-package/
 
 work/
 assets/*.png
+
+node_modules/
