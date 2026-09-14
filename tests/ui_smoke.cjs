@@ -6,24 +6,29 @@ fs.mkdirSync('work',{recursive:true});
 const server=spawn(process.env.TERMXK_PYTHON||'python',['tests/ui_server.py'],{stdio:'ignore',windowsHide:true});
 process.on('exit',()=>server.kill());
 (async()=>{
-for(let i=0;i<100;i++){try{if((await fetch('http://127.0.0.1:8876/state')).ok)break}catch{}await new Promise(r=>setTimeout(r,100));}
+for(let i=0;i<100;i++){try{if((await fetch('http://127.0.0.1:8877/state')).ok)break}catch{}await new Promise(r=>setTimeout(r,100));}
 const browser=await chromium.launch({channel:process.env.TERMXK_BROWSER||'msedge',headless:true});
 const page=await browser.newPage({viewport:{width:1480,height:900},deviceScaleFactor:1.25});let errors=[],dialogs=0;
 page.on('pageerror',e=>errors.push(e.message));page.on('dialog',async d=>{dialogs++;await d.dismiss()});
 await page.addInitScript(()=>{const post=async(method,args)=>await(await fetch('/'+method,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(args)})).json();window.pywebview={api:{state:async()=>await(await fetch('/state')).json(),action:(...a)=>post('action',a),setting:(...a)=>post('setting',a),background:(...a)=>post('background',a),change_data:(...a)=>post('change_data',a)}};window.addEventListener('DOMContentLoaded',()=>window.dispatchEvent(new Event('pywebviewready')))});
-await page.goto('http://127.0.0.1:8876');await page.waitForFunction(()=>window.Termxk?.getState());
+await page.goto('http://127.0.0.1:8877');await page.waitForFunction(()=>window.Termxk?.getState());
 await page.screenshot({path:'work/termxk-main.png'});
 assert.equal(await page.locator('.task').count(),3);assert.equal(await page.locator('.reward-label').count(),6);
 const font=await page.locator('.task-title').first().evaluate(e=>getComputedStyle(e).fontSize);assert.equal(font,'16px');
 const box=await page.locator('#forms').boundingBox();assert.ok(box.y+box.height<=900);
 const statusBox=await page.locator('#status').boundingBox();assert.ok(statusBox.y<70);
 const base=await page.locator('#orbitStage').boundingBox();
-await page.locator('#orbitStage').hover();await page.waitForTimeout(1050);
-const big=await page.locator('#orbitStage').boundingBox();assert.ok(big.width>1480*.7);assert.ok(big.height>900*.85);assert.ok(big.width>base.width*1.5);
-assert.equal(await page.locator('#taskList').evaluate(e=>getComputedStyle(e.parentElement).filter),'blur(7px)');
-await page.screenshot({path:'work/termxk-focus.png'});
-const label=page.locator('.reward-label').first();const color=await label.evaluate(e=>getComputedStyle(e).fill);await label.hover();assert.equal(await label.evaluate(e=>getComputedStyle(e).fill),color);
-await label.click();await page.waitForTimeout(750);assert.equal(await page.locator('body').evaluate(e=>e.classList.contains('orbit-expanded')),false);
+await page.locator('#orbitStage').hover();await page.waitForTimeout(800);
+const big=await page.locator('#orbitStage').boundingBox();assert.deepEqual(big,base);
+assert.equal(await page.locator('#taskList').evaluate(e=>getComputedStyle(e.parentElement).filter),'none');
+const initial=await page.locator('#rewardRotor').getAttribute('transform');
+await page.mouse.wheel(0,240);await page.waitForTimeout(700);assert.notEqual(await page.locator('#rewardRotor').getAttribute('transform'),initial);
+const afterWheel=await page.locator('#rewardRotor').getAttribute('transform');
+await page.mouse.move(base.x+base.width/2+70,base.y+base.height/2);await page.mouse.down();await page.mouse.move(base.x+base.width/2,base.y+base.height/2+70,{steps:10});await page.mouse.up();await page.waitForTimeout(400);
+assert.notEqual(await page.locator('#rewardRotor').getAttribute('transform'),afterWheel);
+assert.equal(await page.locator('#redeemReward').isDisabled(),true);
+await page.locator('#orbitStage').focus();await page.keyboard.press('Home');await page.waitForTimeout(800);
+const label=page.locator('.reward-label').first();const color=await label.evaluate(e=>getComputedStyle(e).fill);await label.hover();assert.equal(await label.evaluate(e=>getComputedStyle(e).fill),color);await label.click();
 await page.locator('#redeemReward').click();await page.waitForFunction(()=>document.querySelectorAll('.reward-label').length===5);
 await page.locator('#taskList .task').nth(1).locator('[data-act=complete]').click();await page.waitForFunction(()=>document.querySelectorAll('.task').length===2);
 await page.locator('#logButton').click();await page.waitForFunction(()=>document.querySelector('#logsPage').classList.contains('visible'));assert.ok(await page.locator('.log-entry').count()>=3);
@@ -35,5 +40,5 @@ await page.locator('#settingsButton').click();await page.locator('#routineInput'
 await page.locator('.routine input[type=checkbox]').last().check();await page.waitForFunction(()=>document.querySelectorAll('.routine .times')[3].textContent==='1 次');
 await page.locator('[data-mode=rest]').click();await page.waitForFunction(()=>document.querySelectorAll('.routine').length===1);
 await page.setViewportSize({width:1080,height:700});await page.screenshot({path:'work/termxk-small.png'});const bounds=await page.locator('#forms').boundingBox();assert.ok(bounds.y+bounds.height<=700);
-assert.equal(dialogs,0);assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,errors,dialogs,base,big}));await browser.close();
+assert.equal(dialogs,0);assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,errors,dialogs,base,big}));await browser.close();server.kill();
 })().catch(e=>{console.error(e);process.exit(1)});

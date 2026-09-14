@@ -26,4 +26,4 @@ class Handler(BaseHTTPRequestHandler):
   if method not in ['action','setting','change_data','background']:self.send_error(404);return
   data=json.dumps(getattr(api,method)(*payload)).encode()
   self.send_response(200);self.send_header('Content-Type','application/json');self.end_headers();self.wfile.write(data)
-ThreadingHTTPServer(('127.0.0.1',8876),Handler).serve_forever()
+ThreadingHTTPServer(('127.0.0.1',8877),Handler).serve_forever()
